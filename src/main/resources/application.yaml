@@ -7,6 +7,7 @@ spring:
 
 custom:
   rabbit:
-    queue: first_queue
+    first-queue: first_queue
+    second-queue: second_queue
     exchange: first-exchange
-    routing: rabbit.routing
+    routing: rabbit.base-routing

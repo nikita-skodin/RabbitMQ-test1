@@ -10,6 +10,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.util.Random;
 
 @Log4j2
 @Component
@@ -24,26 +25,40 @@ public class Producer {
     @Value("${custom.rabbit.routing}")
     private String routing;
 
-    @Value("${custom.rabbit.queue}")
-    private String queue;
+    @Value("${custom.rabbit.first-queue}")
+    private String firstQueue;
+
+    @Value("${custom.rabbit.second-queue}")
+    private String secondQueue;
 
     @Bean
-    public Queue queue() {
-        return new Queue(queue, true);
+    public Queue firstQueue() {
+        return new Queue(firstQueue, true);
     }
 
     @Bean
-    public DirectExchange directExchange() {
-        return new DirectExchange(exchange, true, false);
+    public Queue secondQueue() {
+        return new Queue(secondQueue, true);
     }
 
     @Bean
-    public Binding binding1(Queue queue, DirectExchange topicExchange) {
-        return BindingBuilder.bind(queue).to(topicExchange).with(routing);
+    public TopicExchange topicExchange() {
+        return new TopicExchange(exchange, true, false);
+    }
+
+    @Bean
+    public Binding firstBinding(Queue firstQueue, TopicExchange topicExchange) {
+        return BindingBuilder.bind(firstQueue).to(topicExchange).with(routing + ".true");
+    }
+
+    @Bean
+    public Binding secondBinding(Queue secondQueue, TopicExchange topicExchange) {
+        return BindingBuilder.bind(secondQueue).to(topicExchange).with(routing + ".false");
     }
 
     @Scheduled(fixedDelay = 5000)
     public void produce() {
+        Random random = new Random();
         LocalDate date = LocalDate.now();
 
         MessageProperties messageProperties = new MessageProperties();
@@ -51,9 +66,11 @@ public class Producer {
 
         Message message = new Message(date.toString().getBytes(), messageProperties);
 
-        rabbitTemplate.send(exchange, routing, message);
+        boolean b = random.nextBoolean();
 
-        log.info("produce: {}", date);
+        rabbitTemplate.send(exchange, routing + "." + b, message);
+
+        log.info("produce: {}, queue: {}", date, b);
     }
 
 }
